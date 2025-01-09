@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2048</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #336699;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Comfortaa', cursive;
+    }
+
+    .container1 {
+      text-align: center;
+      background-color: #6699cc;
+      padding: 20px;
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    h1 {
+      color: white;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: #0066cc;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 300px;
+      box-sizing: border-box;
+    }
+
+    .settings-container {
+      display: none;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .settings-container.show {
+      display: block;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .settings-label {
+      font-weight: bold;
+    }
+
+    .container {
+      background-color: #6699cc;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      display: none; /* Скрываем по умолчанию */
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 260px;
+    }
+
+    .cell {
+      background-color: #faf8ef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 10px;
+      height: 60px;
+      width: 60px;
+    }
+
+    .score {
+      margin-bottom: 20px;
+      font-size: 2rem;
+      color: yellow; /* Измените цвет на желтый для счета */
+    }
+
+    .game-over {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.5rem;
+      color: red;
+    }
+
+    .controls {
+      display: grid;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 10px;
+    }
+
+    button:hover {
+      background-color: #005bb5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container1" id="mainContainer">
+    <h1>Игра 2048<br><small>InnoWave Studio</small></h1>
+    <button id="playButton">Играть</button>
+    <button id="settingsButton">Настройки</button>
+    <div class="settings-container" id="settings">
+      <div class="settings-row">
+        <span class="settings-label">Вибрация:</span>
+        <label class="switch">
+          <input type="checkbox">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Звук:</span>
+        <label class="switch">
+          <input type="checkbox">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Тема:</span>
+        <select>
+          <option value="light">Светлая</option>
+          <option value="dark">Темная</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="container" id="gameContainer">
+    <div class="score" id="score">Счет: 0</div>
+    <div class="grid" id="grid"></div>
+    <div class="game-over" id="game-over">Игра окончена! Нет ходов.</div>
+    <div class="controls">
+      <button onclick="restart()">Перезапустить</button>
+      <button onclick="exitGame()">Выйти</button>
+    </div>
+  </div>
+
+  <script>
+    const playButton = document.getElementById('playButton');
+const mainContainer = document.getElementById('mainContainer');
+const gameContainer = document.getElementById('gameContainer');
+let grid = [];
+let score = 0;
+const defaultBackgroundColor = '#faf8ef'; // Цвет фона ячеек по умолчанию
+
+playButton.addEventListener('click', () => {
+    mainContainer.style.display = 'none'; // Скрываем первый контейнер
+    gameContainer.style.display = 'block'; // Показываем второй контейнер
+    startGame(); // Функция, чтобы стартовать игру
+});
+
+function startGame() {
+    setup();
+    updateGrid();
+    window.addEventListener('touchstart', handleTouchStart, false);
+    window.addEventListener('touchmove', handleTouchMove, false);
+}
+
+function setup() {
+    for (let i = 0; i < 4; i++) {
+        grid[i] = [0, 0, 0, 0];
+    }
+    generateTile();
+    generateTile();
+}
+
+function generateTile() {
+    let emptyTiles = [];
+    grid.forEach((row, i) => {
+        row.forEach((value, j) => {
+            if (value === 0) emptyTiles.push([i, j]);
+        });
+    });
+
+    if (emptyTiles.length > 0) {
+        let [i, j] = emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+        grid[i][j] = Math.random() < 0.9 ? 2 : 4;
+    }
+}
+
+function colorCell(value) {
+    if (value === 0) return defaultBackgroundColor;
+    if (value === 2) return '#ede0c8';
+    if (value === 4) return '#f2b179';
+    if (value === 8) return '#f59563';
+    if (value === 16) return '#f67c5f';
+    if (value === 32) return '#f76341';
+    if (value === 64) return '#f44336';
+    if (value === 128) return '#edc53f';
+    if (value === 256) return '#edc22e';
+    if (value === 512) return '#edc22d';
+    if (value === 1024) return '#edc22c';
+    if (value === 2048) return '#edc21e';
+    return '#cdc1b4';
+}
+
+function updateGrid() {
+    const gridElement = document.getElementById('grid');
+    gridElement.innerHTML = '';
+    grid.forEach(row => {
+        row.forEach(value => {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.textContent = value > 0 ? value : '';
+            cell.style.backgroundColor = colorCell(value);
+            gridElement.appendChild(cell);
+        });
+    });
+    document.getElementById('score').textContent = `Счет: ${score}`;
+    checkGameOver();
+}
+
+let xDown = null;
+let yDown = null;
+
+function handleTouchStart(evt) {
+    const firstTouch = evt.touches[0];
+    xDown = firstTouch.clientX;
+    yDown = firstTouch.clientY;
+}
+
+function handleTouchMove(evt) {
+    if (!xDown || !yDown) return;
+    const xUp = evt.touches[0].clientX;
+    const yUp = evt.touches[0].clientY;
+    const xDiff = xDown - xUp;
+    const yDiff = yDown - yUp;
+
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+        xDiff > 0 ? move('left') : move('right');
+    } else {
+        yDiff > 0 ? move('up') : move('down');
+    }
+    xDown = null;
+    yDown = null;
+}
+
+function move(direction) {
+    let previousGrid = JSON.stringify(grid);
+
+    if (direction === 'up') {
+        for (let j = 0; j < 4; j++) {
+            let stack = [];
+            for (let i = 0; i < 4; i++) {
+                if (grid[i][j] !== 0) stack.push(grid[i][j]);
+            }
+            merge(stack);
+            for (let i = 0; i < 4; i++) {
+                grid[i][j] = stack[i] || 0;
+            }
+        }
+    } else if (direction === 'down') {
+        for (let j = 0; j < 4; j++) {
+            let stack = [];
+            for (let i = 3; i >= 0; i--) {
+                if (grid[i][j] !== 0) stack.push(grid[i][j]);
+            }
+            merge(stack);
+            for (let i = 3; i >= 0; i--) {
+                grid[i][j] = stack[3 - i] || 0;
+            }
+        }
+    } else if (direction === 'left') {
+        for (let i = 0; i < 4; i++) {
+            let stack = [];
+            for (let j = 0; j < 4; j++) {
+                if (grid[i][j] !== 0) stack.push(grid[i][j]);
+            }
+            merge(stack);
+            for (let j = 0; j < 4; j++) {
+                grid[i][j] = stack[j] || 0;
+            }
+        }
+    } else if (direction === 'right') {
+        for (let i = 0; i < 4; i++) {
+            let stack = [];
+            for (let j = 3; j >= 0; j--) {
+                if (grid[i][j] !== 0) stack.push(grid[i][j]);
+            }
+            merge(stack);
+            for (let j = 3; j >= 0; j--) {
+                grid[i][j] = stack[3 - j] || 0;
+            }
+        }
+    }
+
+    if (previousGrid !== JSON.stringify(grid)) {
+        generateTile();
+        updateGrid();
+    }
+}
+
+function merge(stack) {
+    for (let i = 0; i < stack.length - 1; i++) {
+        if (stack[i] === stack[i + 1]) {
+            stack[i] *= 2;
+            score += stack[i];
+            stack.splice(i + 1, 1);
+        }
+    }
+}
+
+function checkGameOver() {
+    const emptyTiles = grid.flat().filter(value => value === 0).length;
+    const ableToMerge = checkMergeable();
+
+    if (emptyTiles === 0 && !ableToMerge) {
+        showGameOver();
+    }
+}
+
+function checkMergeable() {
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 3; j++) {
+            if (grid[i][j] === grid[i][j + 1] || grid[j][i] === grid[j + 1][i]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function showGameOver() {
+    const gameOverElement = document.getElementById('game-over');
+    gameOverElement.style.display = 'block';
+}
+
+function restart() {
+    score = 0;
+    setup();
+    updateGrid();
+    document.getElementById('game-over').style.display = 'none'; // Скрыть сообщение о проигрыше
+}
+
+function exitGame() {
+    mainContainer.style.display = 'grid'; // Показываем первый контейнер снова
+    gameContainer.style.display = 'none'; // Скрываем второй контейнер
+}
+  </script>
+</body>
+</html>
+
